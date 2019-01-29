@@ -31,7 +31,7 @@ class Variable:
         if name != None:
             self.name = name
         else:
-            self.name = random_string()
+            self.name = random_string() + str(id(self))
 
         self.cat = cat
         self.upper_bound = upper_bound
@@ -43,6 +43,21 @@ class Variable:
             self.upper_bound = 1
             self.lower_bound = 0
 
+    def get_bound_type(self):
+        """
+        get the variable's lower and upper bound type
+        """
+        if self.lower_bound == None and self.upper_bound == None:
+            return bound_two_open
+        elif self.lower_bound != None and self.upper_bound == None:
+            return bound_right_open
+        elif self.lower_bound == None and self.upper_bound != None:
+            return bound_left_open
+        elif self.lower_bound != None and self.upper_bound != None:
+            return bound_two_closed
+        else:
+            raise ValueError("Variable has infeasible lower or upper bound.")
+
     def __str__(self):
         return self.name
 
@@ -52,6 +67,7 @@ class LinearExpression:
     
     paras:
         name: the name of the linear expression.
+        constant: the constant number
     """
     def __init__(self, name=None):
         self.__body__ = defaultdict(lambda: 0)
@@ -60,7 +76,7 @@ class LinearExpression:
         if name != None:
             self.name = name
         else:
-            self.name = random_string()
+            self.name = random_string() + str(id(self))
 
     def add_item(self, variable, coefficient):
         """
@@ -78,6 +94,13 @@ class LinearExpression:
         return the value of the linear expression.
         """
         return sum(self.__body__[x] * self.variable_dict[x].value for x in self.__body__)
+
+    def oppose(self):
+        """
+        make the cofficient of each item become the opposite number.
+        """
+        for variable_name in self.__body__:
+            self.__body__[variable_name] = -self.__body__[variable_name]
 
     def copy(self):
         result = LinearExpression()
@@ -102,7 +125,7 @@ class Constrain:
         if name != None:
             self.name = name
         else:
-            self.name = random_string()
+            self.name = random_string() + str(id(self))
         
         if lhs == None:
             self.lhs = LinearExpression()
@@ -209,6 +232,9 @@ class Model:
         self.objective = LinearExpression()
         self.constrain_dict = defaultdict(lambda: None)
 
+        # the contrain from the lower and upper bound of the variables.
+        self.sign_contrain_dict = defaultdict(lambda: None)
+
     def copy(self, name):
         """
         copy the model.
@@ -234,11 +260,11 @@ class Model:
             if variable.lower_bound != None:
                 lower_bound_constrain = Constrain(sense=sense_geq, rhs=variable.lower_bound)
                 lower_bound_constrain.add_lhs_item(variable, 1)
-                self.add_constrain(lower_bound_constrain)
+                self.add_sign_constrain(lower_bound_constrain)
             if variable.upper_bound != None:
                 upper_bound_constrain = Constrain(sense=sense_leq, rhs=variable.upper_bound)
                 upper_bound_constrain.add_lhs_item(variable, 1)
-                self.add_constrain(upper_bound_constrain)
+                self.add_sign_constrain(upper_bound_constrain)
         else:
             raise ValueError("Two or more variables have the same name, or one variable has been added more than once.")
 
@@ -288,8 +314,24 @@ class Model:
         """
         return self.constrain_dict[constrain_name]
 
+    def add_sign_constrain(self, constrain):
+        """
+        add a sign constrain to the model.
+
+        paras:
+            constrain: the constrain to add        
+        """        
+        self.sign_contrain_dict[constrain.name] = constrain
+
     def __str__(self):
         result = "Obj:\n"
+        if self.sense == sense_max:
+            result += "Max "
+        elif self.sense == sense_min:
+            result += "Min "
+        else:
+            raise ValueError("Invalid model sense: max or min")
+
         result += (str(self.objective) + "\n")
 
         result += "\n"

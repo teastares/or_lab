@@ -15,3 +15,9 @@ sense_geq = 1
 # sense for a model
 sense_max = 0
 sense_min = 1
+
+# the lower and upper bound type of a variable
+bound_two_open = 0
+bound_left_open = 1
+bound_right_open = 2
+bound_two_closed = 3
