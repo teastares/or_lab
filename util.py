@@ -1,7 +1,8 @@
 """
 This file defines the utilities.
-Last edited by Teast Ares, 20190126.
+Last edited by Teast Ares, 20190130.
 """
+
 from collections import defaultdict
 from or_lab.const import *
 import string
@@ -46,6 +47,9 @@ class Variable:
     def get_bound_type(self):
         """
         get the variable's lower and upper bound type
+
+        retuns:
+            the bound type
         """
         if self.lower_bound == None and self.upper_bound == None:
             return bound_two_open
@@ -59,7 +63,18 @@ class Variable:
             raise ValueError("Variable has infeasible lower or upper bound.")
 
     def __str__(self):
-        return self.name
+        result = self.cat + ": " + self.name + ", "
+        if self.lower_bound == None:
+            result += "(-infinite, "
+        else:
+            result += "[{0}, ".format(self.lower_bound)
+        
+        if self.upper_bound == None:
+            result += "infinite)"
+        else:
+            result += "{0}]".format(self.upper_bound)
+
+        return result
 
 class LinearExpression:
     """
@@ -103,6 +118,12 @@ class LinearExpression:
             self.__body__[variable_name] = -self.__body__[variable_name]
 
     def copy(self):
+        """
+        copy the linear expression.
+
+        returns:
+            a linear expression: the same variables and cofficients
+        """
         result = LinearExpression()
         result.__body__ = self.__body__.copy()
         result.variable_dict = self.variable_dict.copy()
@@ -175,6 +196,9 @@ class Constrain:
     def is_valid(self):
         """
         check if this constrian is valid or not.
+
+        returns:
+            bool: if this constrain is valid.
         """
         if self.sense == sense_leq:
             if self.lhs.value() <= self.rhs:
@@ -241,6 +265,9 @@ class Model:
 
         paras:
             name: the name of the target (backup) model.
+
+        returns:
+            model: the model with same variables, objective function and constrains.
         """
         result = Model(name=name, sense=self.sense)
         result.variable_dict = self.variable_dict.copy()
@@ -274,6 +301,9 @@ class Model:
 
         paras:
             variable_name: the name of the variable.
+
+        returns:
+            variable
         """
         return self.variable_dict[variable_name]
         
@@ -311,6 +341,9 @@ class Model:
 
         paras:
             constrain_name: the name of the constrain.
+
+        returns:
+            constrain
         """
         return self.constrain_dict[constrain_name]
 
@@ -338,7 +371,7 @@ class Model:
 
         result += "Variables:\n"
         for variable in self.variable_dict.values():
-            result += (str(variable.cat) + ": " + str(variable) + "\n")
+            result += (str(variable) + "\n")
 
         result += "\n"
 
