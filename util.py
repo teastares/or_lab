@@ -46,10 +46,10 @@ class Variable:
 
     def get_bound_type(self):
         """
-        get the variable's lower and upper bound type
+        get the variable's lower and upper bound type.
 
         retuns:
-            the bound type
+            the bound type.
         """
         if self.lower_bound == None and self.upper_bound == None:
             return bound_two_open
@@ -82,7 +82,6 @@ class LinearExpression:
     
     paras:
         name: the name of the linear expression.
-        constant: the constant number
     """
     def __init__(self, name=None):
         self.__body__ = defaultdict(lambda: 0)
@@ -122,7 +121,7 @@ class LinearExpression:
         copy the linear expression.
 
         returns:
-            a linear expression: the same variables and cofficients
+            a linear expression: the same variables and cofficients.
         """
         result = LinearExpression()
         result.__body__ = self.__body__.copy()
@@ -222,7 +221,8 @@ class Constrain:
             raise ValueError("sense not valid")
 
     def __str__(self):
-        result = str(self.lhs)
+        result = self.name + ": "
+        result += str(self.lhs)
 
         if self.sense == sense_leq:
             result += " <= "
@@ -280,7 +280,7 @@ class Model:
         add a variable to the model.
 
         paras:
-            variable: the decision variable to add
+            variable: the decision variable to add.
         """
         if self.variable_dict[variable.name] is None:
             self.variable_dict[variable.name] = variable
@@ -303,7 +303,7 @@ class Model:
             variable_name: the name of the variable.
 
         returns:
-            variable
+            variable.
         """
         return self.variable_dict[variable_name]
         
@@ -343,7 +343,7 @@ class Model:
             constrain_name: the name of the constrain.
 
         returns:
-            constrain
+            constrain.
         """
         return self.constrain_dict[constrain_name]
 
@@ -352,7 +352,7 @@ class Model:
         add a sign constrain to the model.
 
         paras:
-            constrain: the constrain to add        
+            constrain: the constrain to add.      
         """        
         self.sign_contrain_dict[constrain.name] = constrain
 
