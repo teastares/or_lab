@@ -1,6 +1,30 @@
 """
-the Constant Variables
+the Constant Variables.
 """
+
+import sys
+
+
+class _const(object):
+    """
+    The class of constant number.
+    It doesn't follow the Pascal format since its speciality.
+    """
+    class ConstError(TypeError):
+        pass
+
+    class ConstCaseError(ConstError):
+        pass
+
+    def __setattr__(self, key, value):
+        if self.__dict__.has_key(key):
+            raise self.ConstError("Can't change const.{0}".format(key))
+        if not key.isupper():
+            raise self.ConstCaseError("Const name {0} is not all uppercase".format(key))
+
+
+sys.modules[__name__] = _const()
+import const
 
 # the category of decision variables
 cat_binary = "binary"
