@@ -4,7 +4,7 @@ Last edited by Teast Ares, 20190130.
 """
 
 from or_lab.util import *
-from or_lab.const import *
+from or_lab.constant import const
 
 def map_variables(model):
     """
@@ -18,31 +18,31 @@ def map_variables(model):
             contains the replaced parameters.
     """
     variable_map_dict = {
-        bound_two_open: defaultdict(lambda: None),
-        bound_left_open: defaultdict(lambda: None),
-        bound_right_open: defaultdict(lambda: None),
-        bound_two_closed: defaultdict(lambda: None)
+        const.BOUND_TWO_OPEN: defaultdict(lambda: None),
+        const.BOUND_LEFT_OPEN: defaultdict(lambda: None),
+        const.BOUND_RIGHT_OPEN: defaultdict(lambda: None),
+        const.BOUND_TWO_CLOSED: defaultdict(lambda: None)
     }
     
     for variable in model.variable_dict.values():
         # if x is two-side unbounded (-infinite, infinite), then x = x1 - x2
-        if variable.get_bound_type() == bound_two_open:
+        if variable.get_bound_type() == const.BOUND_TWO_OPEN:
             x1 = Variable(name=variable.name + "_plus",cat=variable.cat)
             x2 = Variable(name=variable.name + "_minus", cat=variable.cat)
-            variable_map_dict[bound_two_open][variable.name] = (x1, x2)
+            variable_map_dict[const.BOUND_TWO_OPEN][variable.name] = (x1, x2)
         # if x is left-side unbounded (-infinite, upper_bound), then x = -x1 + upper_bound
-        elif variable.get_bound_type() == bound_left_open:
+        elif variable.get_bound_type() == const.BOUND_LEFT_OPEN:
             x1 = Variable(name=variable.name + "_opposite_shift", cat=variable.cat)
-            variable_map_dict[bound_left_open][variable.name] = (x1, variable.upper_bound)
+            variable_map_dict[const.BOUND_LEFT_OPEN][variable.name] = (x1, variable.upper_bound)
         # if x is right-side unbounded (lower_bound, infinite), then x = x1 + lower_bound
-        elif variable.get_bound_type() == bound_right_open:
+        elif variable.get_bound_type() == const.BOUND_RIGHT_OPEN:
             x1 = Variable(name=variable.name + "_shift", cat=variable.cat)
-            variable_map_dict[bound_right_open][variable.name] = (x1, variable.lower_bound)
+            variable_map_dict[const.BOUND_RIGHT_OPEN][variable.name] = (x1, variable.lower_bound)
         # if x is two-side closed (lower_bound, upper_bound), then x = x1 + lower_bound, 
         # and there should be a constrain x1 <= variable.upper_bound - variable.lower_bound
         else:
             x1 = Variable(name=variable.name + "_shift", cat=variable.cat)
-            variable_map_dict[bound_two_closed][variable.name] = (x1, variable.lower_bound, variable.upper_bound - variable.lower_bound)
+            variable_map_dict[const.BOUND_TWO_CLOSED][variable.name] = (x1, variable.lower_bound, variable.upper_bound - variable.lower_bound)
 
     return variable_map_dict
 
@@ -63,20 +63,20 @@ def replace_linear_expression(linear_expression, variable_map_dict):
 
     for variable_name, coefficient in linear_expression.__body__.items():
         variable = linear_expression.variable_dict[variable_name]
-        if variable.get_bound_type() == bound_two_open:
-            x1, x2 = variable_map_dict[bound_two_open][variable_name]
+        if variable.get_bound_type() == const.BOUND_TWO_OPEN:
+            x1, x2 = variable_map_dict[const.BOUND_TWO_OPEN][variable_name]
             replaced_linear_expression.add_item(x1, coefficient)
             replaced_linear_expression.add_item(x2, -coefficient)
-        elif variable.get_bound_type() == bound_left_open:
-            x1, shift = variable_map_dict[bound_left_open][variable_name]
+        elif variable.get_bound_type() == const.BOUND_LEFT_OPEN:
+            x1, shift = variable_map_dict[const.BOUND_LEFT_OPEN][variable_name]
             replaced_linear_expression.add_item(x1, -coefficient)
             arhs -= (shift * coefficient)
-        elif variable.get_bound_type() == bound_right_open:
-            x1, shift = variable_map_dict[bound_right_open][variable_name]
+        elif variable.get_bound_type() == const.BOUND_RIGHT_OPEN:
+            x1, shift = variable_map_dict[const.BOUND_RIGHT_OPEN][variable_name]
             replaced_linear_expression.add_item(x1, coefficient)
             arhs -= (shift * coefficient)
         else:
-            x1, shift, _ = variable_map_dict[bound_two_closed][variable_name]
+            x1, shift, _ = variable_map_dict[const.BOUND_TWO_CLOSED][variable_name]
             replaced_linear_expression.add_item(x1, coefficient)
             arhs -= (shift * coefficient)
 
@@ -93,23 +93,23 @@ def standardize_model(model):
         the standardized model.
     """
     variable_map_dict = map_variables(model)
-    standard_model = Model(name="standard " + model.name,sense=sense_max)
+    standard_model = Model(name="standard " + model.name,sense=const.SENSE_MAX)
 
     # add the standard variables to the standard model.
-    for x1, x2 in variable_map_dict[bound_two_open].values():
+    for x1, x2 in variable_map_dict[const.BOUND_TWO_OPEN].values():
         standard_model.add_variable(x1)
         standard_model.add_variable(x2)
 
-    for x1, _ in variable_map_dict[bound_left_open].values():
+    for x1, _ in variable_map_dict[const.BOUND_LEFT_OPEN].values():
         standard_model.add_variable(x1)
 
-    for x1, _ in variable_map_dict[bound_right_open].values():
+    for x1, _ in variable_map_dict[const.BOUND_RIGHT_OPEN].values():
         standard_model.add_variable(x1)
 
-    for x1, _, upper_bound in variable_map_dict[bound_two_closed].values():
+    for x1, _, upper_bound in variable_map_dict[const.BOUND_TWO_CLOSED].values():
         standard_model.add_variable(x1)
         
-        upper_bound_constrain = Constrain(name=x1.name + "_upper_bound", sense=sense_eq)
+        upper_bound_constrain = Constrain(name=x1.name + "_upper_bound", sense=const.SENSE_EQ)
         slack_variable = Variable(name="slack_"+x1.name)
 
         upper_bound_constrain.add_lhs_item(x1, 1)
@@ -118,7 +118,7 @@ def standardize_model(model):
         standard_model.add_constrain(upper_bound_constrain)
 
     # objective function
-    if model.sense == sense_max:
+    if model.sense == const.SENSE_MAX:
         standard_model.set_objective(replace_linear_expression(model.objective, variable_map_dict)[0])
     else:
         model.objective.oppose()
@@ -128,12 +128,12 @@ def standardize_model(model):
     # constrains
     for original_constrain in model.constrain_dict.values():
         lhs, arhs = replace_linear_expression(original_constrain.lhs, variable_map_dict)
-        constrain = Constrain(name=original_constrain.name + "_replaced", lhs=lhs, sense=sense_eq, rhs=original_constrain.rhs + arhs)
+        constrain = Constrain(name=original_constrain.name + "_replaced", lhs=lhs, sense=const.SENSE_EQ, rhs=original_constrain.rhs + arhs)
 
-        if original_constrain.sense == sense_leq:
+        if original_constrain.sense == const.SENSE_LEQ:
             slack_variable = Variable(name="slack_"+original_constrain.name)
             constrain.add_lhs_item(slack_variable, 1)
-        elif original_constrain.sense == sense_geq:
+        elif original_constrain.sense == const.SENSE_GEQ:
             slack_variable = Variable(name="slack_"+original_constrain.name)
             constrain.add_lhs_item(slack_variable, -1)
 

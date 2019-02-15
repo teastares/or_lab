@@ -4,7 +4,7 @@ Last edited by Teast Ares, 20190130.
 """
 
 from collections import defaultdict
-from or_lab.const import *
+from or_lab.constant import const
 import string
 import random
 
@@ -28,7 +28,7 @@ class Variable:
         upper_bound: the upper bound of the variable, if None, the upper bound is infinite
         lower_bound: the lower bound of the variable, if None, the lower bound is negative infinite.
     """
-    def __init__(self, name=None, cat=cat_continuous, upper_bound=None, lower_bound=0, value=0):
+    def __init__(self, name=None, cat=const.CAT_CONTINUOUS, upper_bound=None, lower_bound=0, value=0):
         if name != None:
             self.name = name
         else:
@@ -39,8 +39,8 @@ class Variable:
         self.lower_bound = lower_bound
         self.value = value
 
-        if cat == cat_binary:
-            self.cat = cat_integer
+        if cat == const.CAT_BINARY:
+            self.cat = const.CAT_INTEGER
             self.upper_bound = 1
             self.lower_bound = 0
 
@@ -52,13 +52,13 @@ class Variable:
             the bound type.
         """
         if self.lower_bound == None and self.upper_bound == None:
-            return bound_two_open
+            return const.BOUND_TWO_OPEN
         elif self.lower_bound != None and self.upper_bound == None:
-            return bound_right_open
+            return const.BOUND_RIGHT_OPEN
         elif self.lower_bound == None and self.upper_bound != None:
-            return bound_left_open
+            return const.BOUND_LEFT_OPEN
         elif self.lower_bound != None and self.upper_bound != None:
-            return bound_two_closed
+            return const.BOUND_TWO_CLOSED
         else:
             raise ValueError("Variable has infeasible lower or upper bound.")
 
@@ -141,7 +141,7 @@ class Constrain:
         sense: equal, less || equal or great || equal
         rhs: right hand side, a valid number.
     """
-    def __init__(self, name=None, lhs=None, sense=sense_leq, rhs = 0):
+    def __init__(self, name=None, lhs=None, sense=const.SENSE_LEQ, rhs = 0):
         if name != None:
             self.name = name
         else:
@@ -199,19 +199,19 @@ class Constrain:
         returns:
             bool: if this constrain is valid.
         """
-        if self.sense == sense_leq:
+        if self.sense == const.SENSE_LEQ:
             if self.lhs.value() <= self.rhs:
                 return True
             else:
                 return False
 
-        elif self.sense == sense_eq:
+        elif self.sense == const.SENSE_EQ:
             if self.lhs.value() == self.rhs:
                 return True
             else:
                 return False
 
-        elif self.sense == sense_geq:
+        elif self.sense == const.SENSE_GEQ:
             if self.lhs.value() >= self.rhs:
                 return True
             else:
@@ -224,13 +224,13 @@ class Constrain:
         result = self.name + ": "
         result += str(self.lhs)
 
-        if self.sense == sense_leq:
+        if self.sense == const.SENSE_LEQ:
             result += " <= "
 
-        elif self.sense == sense_eq:
+        elif self.sense == const.SENSE_EQ:
             result += " = "
 
-        elif self.sense == sense_geq:
+        elif self.sense == const.SENSE_GEQ:
             result += " > "
 
         else:
@@ -249,9 +249,9 @@ class Model:
         name: the name of the model
         sense: maximize or minimize.
     """
-    def __init__(self, name, sense=sense_max):
+    def __init__(self, name, sense=const.SENSE_MAX):
         self.name = name
-        self.sense = sense_max
+        self.sense = const.SENSE_MAX
         self.variable_dict = defaultdict(lambda: None)
         self.objective = LinearExpression()
         self.constrain_dict = defaultdict(lambda: None)
@@ -285,11 +285,11 @@ class Model:
         if self.variable_dict[variable.name] is None:
             self.variable_dict[variable.name] = variable
             if variable.lower_bound != None:
-                lower_bound_constrain = Constrain(sense=sense_geq, rhs=variable.lower_bound)
+                lower_bound_constrain = Constrain(sense=const.SENSE_GEQ, rhs=variable.lower_bound)
                 lower_bound_constrain.add_lhs_item(variable, 1)
                 self.add_sign_constrain(lower_bound_constrain)
             if variable.upper_bound != None:
-                upper_bound_constrain = Constrain(sense=sense_leq, rhs=variable.upper_bound)
+                upper_bound_constrain = Constrain(sense=const.SENSE_LEQ, rhs=variable.upper_bound)
                 upper_bound_constrain.add_lhs_item(variable, 1)
                 self.add_sign_constrain(upper_bound_constrain)
         else:
@@ -358,9 +358,9 @@ class Model:
 
     def __str__(self):
         result = "Obj:\n"
-        if self.sense == sense_max:
+        if self.sense == const.SENSE_MAX:
             result += "Max "
-        elif self.sense == sense_min:
+        elif self.sense == const.SENSE_MIN:
             result += "Min "
         else:
             raise ValueError("Invalid model sense: max or min")
