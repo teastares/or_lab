@@ -3,6 +3,8 @@ This file defines the algorithms.
 Last edited by Teast Ares, 20190130.
 """
 
+import itertools
+import numpy as np
 from or_lab.util import *
 from or_lab.constant import const
 
@@ -61,7 +63,7 @@ def replace_linear_expression(linear_expression, variable_map_dict):
     replaced_linear_expression = LinearExpression()
     arhs = 0
 
-    for variable_name, coefficient in linear_expression.__body__.items():
+    for variable_name, coefficient in linear_expression.coefficient_dict.items():
         variable = linear_expression.variable_dict[variable_name]
         if variable.get_bound_type() == const.BOUND_TWO_OPEN:
             x1, x2 = variable_map_dict[const.BOUND_TWO_OPEN][variable_name]
@@ -85,6 +87,12 @@ def replace_linear_expression(linear_expression, variable_map_dict):
 def standardize_model(model):
     """
     get a standard model.
+    ----------
+    Max cx
+    s.t.
+    Ax = b
+    x >= 0
+    ----------
 
     paras:
         model: the original model.
@@ -111,6 +119,7 @@ def standardize_model(model):
         
         upper_bound_constrain = Constrain(name=x1.name + "_upper_bound", sense=const.SENSE_EQ)
         slack_variable = Variable(name="slack_"+x1.name)
+        standard_model.add_variable(slack_variable)
 
         upper_bound_constrain.add_lhs_item(x1, 1)
         upper_bound_constrain.add_lhs_item(slack_variable, 1)
@@ -132,11 +141,135 @@ def standardize_model(model):
 
         if original_constrain.sense == const.SENSE_LEQ:
             slack_variable = Variable(name="slack_"+original_constrain.name)
+            standard_model.add_variable(slack_variable)
             constrain.add_lhs_item(slack_variable, 1)
         elif original_constrain.sense == const.SENSE_GEQ:
             slack_variable = Variable(name="slack_"+original_constrain.name)
+            standard_model.add_variable(slack_variable)
             constrain.add_lhs_item(slack_variable, -1)
 
         standard_model.add_constrain(constrain)
 
     return standard_model
+
+def matrix_generation(standard_model, variable_index_dict, constrain_index_dict):
+    """
+    For a standard model, we have following sturcture:
+    ------------------
+    Max cx
+    s.t.
+    Ax = b
+    ------------------
+    This function will generate the Numpy Ndarray format data.
+
+
+    paras:
+        standard_model: a model with standard formation,
+        variable_index_dict: the dict for variable's index,
+        constrain_index_dict: the dict for constrain's index.
+
+    returns:
+        c: the cost function vector,
+        A: the left hand side matrix,
+        b: the right hand side vector.
+    """
+    # the column number, or the number of variables.
+    n = len(variable_index_dict)
+    # the row number, or the number of constrains.
+    m = len(constrain_index_dict)
+
+    c = np.zeros(n)
+    for variable_name, value in standard_model.objective.coefficient_dict.items():
+        index = variable_index_dict[variable_name]
+        c[index] = value
+
+    A = np.zeros((m, n))
+    b = np.zeros(m)
+    for constrain_name, constrain in standard_model.constrain_dict.items():
+        row_index = constrain_index_dict[constrain_name]
+        for variable_name, value in constrain.lhs.coefficient_dict.items():
+            column_index = variable_index_dict[variable_name]
+            A[row_index, column_index] = value
+        b[row_index] = constrain.rhs
+
+    return c, A, b
+
+def is_solvable(A, b):
+    """
+    To valid if the linear equations Ax=b is solvable.
+
+    paras:
+        A: the left hand side matrix,
+        b: the right hand side vector.
+
+    returns:
+        True\False
+    """
+    m = b.shape[0]
+    _A = np.concatenate((A, b.reshape(m, 1)), axis=1)
+    if np.linalg.matrix_rank(A) == np.linalg.matrix_rank(_A):
+        return True
+    else:
+        return False
+
+def search_init_solution(A, b):
+    """
+    For a linear equations Ax=b, search a extreme point as a initial solution.
+
+    paras:
+        A: the left hand side matrix,
+        b: the right hand side vector.    
+    """
+    m, n = A.shape
+
+    for item in itertools.permutations(range(n)[::-1], m):
+        _A = A[:, item]
+        basic_solution = np.linalg.solve(_A, b)
+        
+        for value in basic_solution:
+            if value < 0:
+                break
+        else:
+            init_solution = np.zeros(n)
+            init_basic_position = np.zeros(n)
+
+            for index, value in enumerate(basic_solution):
+                position = item[index]
+                init_solution[position] = value
+                init_basic_position[position] = 1
+            
+            return init_solution, init_basic_position
+
+def simplex_method(model):
+    """
+    Use the simplex method to solve the linear programming.
+
+    
+    paras:
+        model: the original linear programing model.
+
+    returns:
+        TBD
+    """
+    standard_model = standardize_model(model)
+
+    variable_list = list(standard_model.variable_dict)
+    constrain_list = list(standard_model.constrain_dict)
+
+    variable_index_dict = dict()
+    constrain_index_dict = dict()
+
+    for index, variable in enumerate(variable_list):
+        variable_index_dict[variable] = index
+    for index, constrain in enumerate(constrain_list):
+        constrain_index_dict[constrain] = index
+
+    c, A, b = matrix_generation(standard_model, variable_index_dict, constrain_index_dict)
+
+    # check if there has a solution
+    if is_solvable(A, b) == False:
+        standard_model.status == const.STATUS_NO_SOLUTION
+        return
+
+    init_solution, init_basic_position = search_init_solution(A, b)
+    return init_solution, init_basic_position

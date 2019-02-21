@@ -84,7 +84,7 @@ class LinearExpression:
         name: the name of the linear expression.
     """
     def __init__(self, name=None):
-        self.__body__ = defaultdict(lambda: 0)
+        self.coefficient_dict = defaultdict(lambda: 0)
         self.variable_dict = defaultdict(lambda: None)
 
         if name != None:
@@ -100,21 +100,33 @@ class LinearExpression:
             variable: the decision variable to add
             coefficient: the coefficient of the variable in this adding item.
         """
-        self.__body__[variable.name] += coefficient
+        self.coefficient_dict[variable.name] += coefficient
         self.variable_dict[variable.name] = variable
+
+    def get_coefficient(self, variable_name):
+        """
+        get a cofficient for a variable.
+
+        paras:
+            variable_name: the name of the variable.
+
+        returns:
+            cofficient: the cofficient of this variable.
+        """
+        return self.variable_dict[variable_name]
 
     def value(self):
         """
         return the value of the linear expression.
         """
-        return sum(self.__body__[x] * self.variable_dict[x].value for x in self.__body__)
+        return sum(self.coefficient_dict[x] * self.variable_dict[x].value for x in self.coefficient_dict)
 
     def oppose(self):
         """
         make the cofficient of each item become the opposite number.
         """
-        for variable_name in self.__body__:
-            self.__body__[variable_name] = -self.__body__[variable_name]
+        for variable_name in self.coefficient_dict:
+            self.coefficient_dict[variable_name] = -self.coefficient_dict[variable_name]
 
     def copy(self):
         """
@@ -124,12 +136,12 @@ class LinearExpression:
             a linear expression: the same variables and cofficients.
         """
         result = LinearExpression()
-        result.__body__ = self.__body__.copy()
+        result.coefficient_dict = self.coefficient_dict.copy()
         result.variable_dict = self.variable_dict.copy()
         return result
 
     def __str__(self):
-        return " + ".join(str(self.__body__[x]) + x for x in self.__body__)
+        return " + ".join(str(self.coefficient_dict[x]) + x for x in self.coefficient_dict)
 
 class Constrain:
     """
@@ -191,6 +203,9 @@ class Constrain:
             rhs: right hand side, a valid number.
         """
         self.rhs = rhs
+
+    def get_coefficient(self, variable_name):
+        return self.lhs.get_coefficient(variable_name)
 
     def is_valid(self):
         """
@@ -258,6 +273,7 @@ class Model:
 
         # the contrain from the lower and upper bound of the variables.
         self.sign_contrain_dict = defaultdict(lambda: None)
+        self.status = const.STATUS_UNSOLVED
 
     def copy(self, name):
         """

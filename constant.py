@@ -40,12 +40,13 @@ const.SENSE_MAX = 0
 const.SENSE_MIN = 1
 
 # the lower and upper bound type of a variable
-bound_two_open = 0
-bound_left_open = 1
-bound_right_open = 2
-bound_two_closed = 3
-
 const.BOUND_TWO_OPEN = 0
 const.BOUND_LEFT_OPEN = 1
 const.BOUND_RIGHT_OPEN = 2
 const.BOUND_TWO_CLOSED = 3
+
+# the status of the model
+const.STATUS_UNSOLVED = 0
+const.STATUS_OPTIMAL = 1
+const.STATUS_NO_SOLUTION = 2
+const.STATUS_UNBOUNDED = 3
