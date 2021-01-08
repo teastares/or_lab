@@ -26,9 +26,9 @@ class ConstantSet(object):
 const = ConstantSet()
 
 # the category of decision variables
-const.CAT_BINARY = "binary"
-const.CAT_CONTINUOUS = "continuous"
-const.CAT_INTEGER = "integer"
+const.CAT_BINARY = "Binary"
+const.CAT_CONTINUOUS = "Continuous"
+const.CAT_INTEGER = "Integer"
 
 # sense for a constrain
 const.SENSE_LEQ = -1

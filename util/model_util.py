@@ -4,7 +4,7 @@ Last edited by Teast Ares, 20190130.
 """
 
 from collections import defaultdict
-from or_lab.constant import const
+from constant import const
 import string
 import random
 

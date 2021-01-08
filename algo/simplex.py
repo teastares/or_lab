@@ -5,8 +5,8 @@ Last edited by Teast Ares, 20190130.
 
 import itertools
 import numpy as np
-from or_lab.util import *
-from or_lab.constant import const
+from util import *
+from constant import const
 
 def map_variables(model):
     """
