@@ -240,7 +240,7 @@ def search_init_solution(A, b):
             
             return init_solution, init_basic_position
 
-def simplex_method(model):
+def simplex_method(model, simplex_type):
     """
     Use the simplex method to solve the linear programming.
 

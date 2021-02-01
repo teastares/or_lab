@@ -2,8 +2,6 @@
 the Constant Variables.
 """
 
-import sys
-
 
 class ConstantSet(object):
     """
@@ -23,6 +21,7 @@ class ConstantSet(object):
             raise self.ConstCaseError("Const name {0} is not all uppercase".format(key))
         self.__dict__[key] = value
 
+
 const = ConstantSet()
 
 # the category of decision variables
@@ -31,9 +30,9 @@ const.CAT_CONTINUOUS = "Continuous"
 const.CAT_INTEGER = "Integer"
 
 # sense for a constrain
-const.SENSE_LEQ = -1
-const.SENSE_EQ = 0
-const.SENSE_GEQ = 1
+const.SENSE_LEQ = "<="
+const.SENSE_EQ = "="
+const.SENSE_GEQ = ">="
 
 # sense for a model
 const.SENSE_MAX = 0
@@ -46,7 +45,7 @@ const.BOUND_RIGHT_OPEN = 2
 const.BOUND_TWO_CLOSED = 3
 
 # the status of the model
-const.STATUS_UNSOLVED = 0
-const.STATUS_OPTIMAL = 1
-const.STATUS_NO_SOLUTION = 2
-const.STATUS_UNBOUNDED = 3
+const.STATUS_UNSOLVED = "Unsolved"
+const.STATUS_OPTIMAL = "Optimal"
+const.STATUS_NO_SOLUTION = "No feasible solution"
+const.STATUS_UNBOUNDED = "Unbounded"
