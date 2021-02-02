@@ -66,18 +66,15 @@ class Variable:
             raise ValueError("Variable has infeasible lower or upper bound.")
 
     def __str__(self):
-        result = self.cat + ": " + self.name + ", "
-        if self.lower_bound is None:
-            result += "(-infinite, "
-        else:
-            result += "[{0}, ".format(self.lower_bound)
+        return "{category}: {name}, {left}, {right}".format(
+            category=self.cat,
+            name=self.name,
+            left="(-infinite" if self.lower_bound is None else "[{}".format(self.lower_bound),
+            right="infinite)" if self.upper_bound is None else "{}]".format(self.upper_bound)
+        )
 
-        if self.upper_bound is None:
-            result += "infinite)"
-        else:
-            result += "{0}]".format(self.upper_bound)
-
-        return result
+    def __repr__(self):
+        return str(self)
 
 
 class LinearExpression:
@@ -126,6 +123,12 @@ class LinearExpression:
         """
         return self.variable_dict[variable.name]
 
+    def get_variables(self):
+        """
+        get a list of variables in the expression
+        """
+        return self.variable_dict.values()
+
     def value(self):
         """
         return the value of the linear expression.
@@ -144,7 +147,7 @@ class LinearExpression:
         copy the linear expression.
 
         returns:
-            a linear expression: the same variables and cofficients.
+            a linear expression: the same variables and coefficients.
         """
         result = LinearExpression()
         result.coefficient_dict = self.coefficient_dict.copy()
@@ -153,6 +156,9 @@ class LinearExpression:
 
     def __str__(self):
         return " + ".join(str(self.coefficient_dict[x]) + x for x in self.coefficient_dict)
+
+    def __repr__(self):
+        return str(self)
 
 
 class Constraint:
@@ -233,7 +239,7 @@ class Constraint:
 
     def is_valid(self):
         """
-        check if this constriant is valid or not.
+        check if this constraint is valid or not.
 
         returns:
             bool: if this constrain is valid.
@@ -262,6 +268,9 @@ class Constraint:
     def __str__(self):
         return "{name}: {lhs} {sense} {rhs}".format(name=self.name, lhs=self.lhs, sense=self.sense, rhs=self.rhs)
 
+    def __repr__(self):
+        return str(self)
+
 
 class Model:
     """
@@ -282,8 +291,6 @@ class Model:
         self.objective = LinearExpression()
         self.constraint_dict = dict()
 
-        # the constraint from the lower and upper bound of the variables.
-        self.sign_constraint_dict = dict()
         self.status = const.STATUS_UNSOLVED
 
     def copy(self, name):
@@ -300,7 +307,6 @@ class Model:
         result.variable_dict = self.variable_dict.copy()
         result.objective = self.objective.copy()
         result.constrain_dict = self.constraint_dict.copy()
-        result.sign_constraint_dict = self.sign_constraint_dict.copy()
         result.status = self.status
         return result
 
@@ -313,28 +319,16 @@ class Model:
         """
         if not self.variable_dict.get(variable):
             self.variable_dict[variable.name] = variable
-            if variable.lower_bound is not None:
-                lb_constraint = Constraint(sense=const.SENSE_GEQ, rhs=variable.lower_bound)
-                lb_constraint.add_lhs_item(variable, 1)
-                self.add_sign_constrain(lb_constraint)
-            if variable.upper_bound is not None:
-                ub_constraint = Constraint(sense=const.SENSE_LEQ, rhs=variable.upper_bound)
-                ub_constraint.add_lhs_item(variable, 1)
-                self.add_sign_constrain(ub_constraint)
-        else:
-            raise ValueError("Two or more variables have the same name, or one variable has been added more than once.")
 
-    def get_variable(self, variable):
+    def add_variables(self, variables):
         """
-        get a variable by the name, if no variable in this model, return None.
+        add a set of variables to the model
 
         paras:
-            variable: the variable.
-
-        returns:
-            variable.
+            variables: a iteration of variables
         """
-        return self.variable_dict[variable.name]
+        for variable in variables:
+            self.add_variable(variable)
 
     def set_objective(self, linear_expression):
         """
@@ -344,6 +338,7 @@ class Model:
             linear_expression: the linear expression to be the objective function.
         """
         self.objective = linear_expression
+        self.add_variables(linear_expression.get_variables())
 
     def add_objective_item(self, variable, coefficient):
         """
@@ -354,58 +349,27 @@ class Model:
             coefficient: the coefficient of the variable in this adding item.        
         """
         self.objective.add_item(variable, coefficient)
+        self.add_variable(variable)
 
-    def add_constrain(self, constrain):
+    def add_constraint(self, constraint):
         """
         add a constrain to the model.
 
         paras:
-            constrain: the constrain to add        
+            constraint: the constraint to add
         """
-        self.constrain_dict[constrain.name] = constrain
-
-    def get_constrain(self, constrain_name):
-        """
-        return a constrain by the contrain name, if no constrain in this model, return None.
-
-        paras:
-            constrain_name: the name of the constrain.
-
-        returns:
-            constrain.
-        """
-        return self.constrain_dict[constrain_name]
-
-    def add_sign_constrain(self, constrain):
-        """
-        add a sign constrain to the model.
-
-        paras:
-            constrain: the constrain to add.      
-        """
-        self.sign_contrain_dict[constrain.name] = constrain
+        self.constraint_dict[constraint.name] = constraint
+        self.add_variables(constraint.lhs.get_variables())
 
     def __str__(self):
-        result = "Obj:\n"
-        if self.sense == const.SENSE_MAX:
-            result += "Max "
-        elif self.sense == const.SENSE_MIN:
-            result += "Min "
-        else:
-            raise ValueError("Invalid model sense: max or min")
-
-        result += (str(self.objective) + "\n")
-
-        result += "\n"
-
-        result += "Variables:\n"
-        for variable in self.variable_dict.values():
-            result += (str(variable) + "\n")
-
-        result += "\n"
-
-        result += "Constrains:\n"
-        for constrain in self.constrain_dict.values():
-            result += (str(constrain) + "\n")
-
+        result = \
+            "Obj:\n{sense} {obj} \nVariables: \n{variables} \nConstraints: \n{constraints}".format(
+                sense=self.sense,
+                obj=str(self.objective),
+                variables="\n".join(str(variable) for variable in self.variable_dict.values()),
+                constraints="\n".join(str(constraint) for constraint in self.constraint_dict.values())
+            )
         return result
+
+    def __repr__(self):
+        str(self)

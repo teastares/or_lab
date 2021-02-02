@@ -35,8 +35,8 @@ const.SENSE_EQ = "="
 const.SENSE_GEQ = ">="
 
 # sense for a model
-const.SENSE_MAX = 0
-const.SENSE_MIN = 1
+const.SENSE_MAX = "Max"
+const.SENSE_MIN = "Min"
 
 # the lower and upper bound type of a variable
 const.BOUND_TWO_OPEN = 0

@@ -8,13 +8,44 @@ import numpy as np
 from util import *
 from constant import const
 
+
+class Simplex:
+    """
+    Simplex method for solving linear programming.
+    If model is not a LP, we will relax it to LP.
+
+    paras:
+        model: the original model.
+    """
+    def __init__(self, model):
+        self.model = model
+
+    def get_standardize_model(self):
+        """
+        get a standard model.
+        ----------
+        Min cx
+        s.t.
+        Ax = b
+        x >= 0
+        ----------
+
+        paras:
+            model: the original model.
+
+        returns:
+            the standardized model.
+        """
+        pass
+
+
 def map_variables(model):
     """
     map the variables by the four types of variable bound.
 
     paras:
         model: the original model.
-    
+
     returns:
         variable_map_dict: a dictionary contains four sub-dictionaries, each
             contains the replaced parameters.
@@ -25,7 +56,7 @@ def map_variables(model):
         const.BOUND_RIGHT_OPEN: defaultdict(lambda: None),
         const.BOUND_TWO_CLOSED: defaultdict(lambda: None)
     }
-    
+
     for variable in model.variable_dict.values():
         # if x is two-side unbounded (-infinite, infinite), then x = x1 - x2
         if variable.get_bound_type() == const.BOUND_TWO_OPEN:
@@ -40,13 +71,14 @@ def map_variables(model):
         elif variable.get_bound_type() == const.BOUND_RIGHT_OPEN:
             x1 = Variable(name=variable.name + "_shift", cat=variable.cat)
             variable_map_dict[const.BOUND_RIGHT_OPEN][variable.name] = (x1, variable.lower_bound)
-        # if x is two-side closed (lower_bound, upper_bound), then x = x1 + lower_bound, 
+        # if x is two-side closed (lower_bound, upper_bound), then x = x1 + lower_bound,
         # and there should be a constrain x1 <= variable.upper_bound - variable.lower_bound
         else:
             x1 = Variable(name=variable.name + "_shift", cat=variable.cat)
             variable_map_dict[const.BOUND_TWO_CLOSED][variable.name] = (x1, variable.lower_bound, variable.upper_bound - variable.lower_bound)
 
     return variable_map_dict
+
 
 def replace_linear_expression(linear_expression, variable_map_dict):
     """
@@ -56,7 +88,7 @@ def replace_linear_expression(linear_expression, variable_map_dict):
         linear_expression: the original linear expression
         variable_map_dict: a dictionary contains four sub-dictionaries, each
             contains the replaced parameters.
-    
+
     returns:
         the replaced linear expression and the additional right hand side.
     """
@@ -84,6 +116,7 @@ def replace_linear_expression(linear_expression, variable_map_dict):
 
     return replaced_linear_expression, arhs
 
+
 def standardize_model(model):
     """
     get a standard model.
@@ -101,7 +134,7 @@ def standardize_model(model):
         the standardized model.
     """
     variable_map_dict = map_variables(model)
-    standard_model = Model(name="standard " + model.name,sense=const.SENSE_MAX)
+    standard_model = Model(name="standard " + model.name, sense=const.SENSE_MAX)
 
     # add the standard variables to the standard model.
     for x1, x2 in variable_map_dict[const.BOUND_TWO_OPEN].values():
@@ -116,15 +149,15 @@ def standardize_model(model):
 
     for x1, _, upper_bound in variable_map_dict[const.BOUND_TWO_CLOSED].values():
         standard_model.add_variable(x1)
-        
-        upper_bound_constrain = Constrain(name=x1.name + "_upper_bound", sense=const.SENSE_EQ)
+
+        upper_bound_constrain = Constraint(name=x1.name + "_upper_bound", sense=const.SENSE_EQ)
         slack_variable = Variable(name="slack_"+x1.name)
         standard_model.add_variable(slack_variable)
 
         upper_bound_constrain.add_lhs_item(x1, 1)
         upper_bound_constrain.add_lhs_item(slack_variable, 1)
         upper_bound_constrain.set_rhs(upper_bound)
-        standard_model.add_constrain(upper_bound_constrain)
+        standard_model.add_constraint(upper_bound_constrain)
 
     # objective function
     if model.sense == const.SENSE_MAX:
@@ -137,7 +170,7 @@ def standardize_model(model):
     # constrains
     for original_constrain in model.constrain_dict.values():
         lhs, arhs = replace_linear_expression(original_constrain.lhs, variable_map_dict)
-        constrain = Constrain(name=original_constrain.name + "_replaced", lhs=lhs, sense=const.SENSE_EQ, rhs=original_constrain.rhs + arhs)
+        constrain = Constraint(name=original_constrain.name + "_replaced", lhs=lhs, sense=const.SENSE_EQ, rhs=original_constrain.rhs + arhs)
 
         if original_constrain.sense == const.SENSE_LEQ:
             slack_variable = Variable(name="slack_"+original_constrain.name)
@@ -148,13 +181,14 @@ def standardize_model(model):
             standard_model.add_variable(slack_variable)
             constrain.add_lhs_item(slack_variable, -1)
 
-        standard_model.add_constrain(constrain)
+        standard_model.add_constraint(constrain)
 
     return standard_model
 
+
 def matrix_generation(standard_model, variable_index_dict, constrain_index_dict):
     """
-    For a standard model, we have following sturcture:
+    For a standard model, we have following structure:
     ------------------
     Max cx
     s.t.
@@ -166,7 +200,7 @@ def matrix_generation(standard_model, variable_index_dict, constrain_index_dict)
     paras:
         standard_model: a model with standard formation,
         variable_index_dict: the dict for variable's index,
-        constrain_index_dict: the dict for constrain's index.
+        constrain_index_dict: the dict for constraint's index.
 
     returns:
         c: the cost function vector,
@@ -194,6 +228,7 @@ def matrix_generation(standard_model, variable_index_dict, constrain_index_dict)
 
     return c, A, b
 
+
 def is_solvable(A, b):
     """
     To valid if the linear equations Ax=b is solvable.
@@ -212,20 +247,21 @@ def is_solvable(A, b):
     else:
         return False
 
+
 def search_init_solution(A, b):
     """
     For a linear equations Ax=b, search a extreme point as a initial solution.
 
     paras:
         A: the left hand side matrix,
-        b: the right hand side vector.    
+        b: the right hand side vector.
     """
     m, n = A.shape
 
     for item in itertools.permutations(range(n)[::-1], m):
         _A = A[:, item]
         basic_solution = np.linalg.solve(_A, b)
-        
+
         for value in basic_solution:
             if value < 0:
                 break
@@ -237,14 +273,15 @@ def search_init_solution(A, b):
                 position = item[index]
                 init_solution[position] = value
                 init_basic_position[position] = 1
-            
+
             return init_solution, init_basic_position
+
 
 def simplex_method(model, simplex_type):
     """
     Use the simplex method to solve the linear programming.
 
-    
+
     paras:
         model: the original linear programing model.
 
